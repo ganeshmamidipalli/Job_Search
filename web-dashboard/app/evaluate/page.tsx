@@ -6,6 +6,31 @@ import ReactMarkdown from 'react-markdown';
 type Phase = 'idle' | 'screening' | 'generating' | 'full-eval' | 'done' | 'error';
 interface Screening { score: number; reason: string; archetype: string; }
 
+// Always use localStorage -- reliable, works everywhere, no KV dependency
+function saveApp(entry: any) {
+  const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
+  // Check duplicate
+  const dup = apps.find((a: any) => a.company === entry.company && a.role === entry.role);
+  if (dup) { Object.assign(dup, entry); }
+  else { apps.unshift({ id: `app-${Date.now()}`, createdAt: Date.now(), ...entry }); }
+  localStorage.setItem('job-apps', JSON.stringify(apps));
+  // Also try KV in background
+  fetch('/api/applications', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  }).catch(() => {});
+}
+
+function updateAppStatus(company: string, role: string, status: string, jdLink?: string) {
+  const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
+  const match = apps.find((a: any) => a.company === company && a.role === role);
+  if (match) {
+    match.status = status;
+    if (jdLink) match.jdLink = jdLink;
+    localStorage.setItem('job-apps', JSON.stringify(apps));
+  }
+}
+
 export default function EvaluatePage() {
   const [jd, setJd] = useState('');
   const [jdLink, setJdLink] = useState('');
@@ -15,20 +40,37 @@ export default function EvaluatePage() {
   const [error, setError] = useState('');
   const [resumeData, setResumeData] = useState<any>(null);
   const [totalCost, setTotalCost] = useState(0);
+  const [appliedMsg, setAppliedMsg] = useState('');
+  const [company, setCompany] = useState('');
+  const [role, setRole] = useState('');
 
   function extractCompany(text: string): string {
-    const m = text.match(/^(.+?)\s*[•·|]/m) || text.match(/(?:at|@)\s+([A-Z][A-Za-z0-9\s&.]+?)(?:\s*[•·|,]|\n)/);
-    return m?.[1]?.trim()?.substring(0, 50) || 'Company';
+    // Try common patterns from job postings
+    const lines = text.split('\n').filter(l => l.trim());
+    // Pattern: "Company Name • Location" or "Company Name | Location"
+    for (const line of lines.slice(0, 5)) {
+      const m = line.match(/^([A-Za-z][A-Za-z0-9\s&.,]+?)\s*[•·|]\s/);
+      if (m && m[1].trim().length > 1 && m[1].trim().length < 50) return m[1].trim();
+    }
+    // Pattern: "at Company"
+    const atMatch = text.match(/(?:at|@)\s+([A-Z][A-Za-z0-9\s&.]+?)(?:\s*[•·|,]|\n)/);
+    if (atMatch) return atMatch[1].trim().substring(0, 50);
+    return 'Company';
   }
 
   function extractRole(text: string): string {
-    const m = text.match(/(?:Entry Level|Senior|Staff|Lead|Principal|Jr\.?|Junior)?\s*([A-Z][A-Za-z\s/&]+?(?:Engineer|Developer|Scientist|Architect|Manager))/);
+    const m = text.match(/(?:Entry.?Level|Senior|Staff|Lead|Principal|Jr\.?|Junior)?\s*([A-Z][A-Za-z\s/&]+?(?:Engineer|Developer|Scientist|Architect|Manager|Analyst))/);
     return m?.[0]?.trim()?.substring(0, 60) || 'AI Engineer';
   }
 
   const evaluate = useCallback(async () => {
     if (jd.trim().length < 50) { setError('Paste the full JD (min 50 chars)'); return; }
-    setPhase('screening'); setScreening(null); setReport(''); setError(''); setResumeData(null); setTotalCost(0);
+    setPhase('screening'); setScreening(null); setReport(''); setError(''); setResumeData(null); setTotalCost(0); setAppliedMsg('');
+
+    const detectedCompany = extractCompany(jd);
+    const detectedRole = extractRole(jd);
+    setCompany(detectedCompany);
+    setRole(detectedRole);
 
     try {
       // Step 1: Score
@@ -44,32 +86,27 @@ export default function EvaluatePage() {
       // Step 2: Resume if good fit
       if (data.score > 3.5) {
         setPhase('generating');
-        const company = extractCompany(jd);
-        const role = extractRole(jd);
         const resumeRes = await fetch('/api/generate-pdf', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company, role, archetype: data.archetype, jobDescription: jd }),
+          body: JSON.stringify({ company: detectedCompany, role: detectedRole, archetype: data.archetype, jobDescription: jd }),
         });
         const rData = await resumeRes.json();
         if (!rData.error) {
           setResumeData(rData);
           cost += ((rData.tokenUsage?.input || 0) + (rData.tokenUsage?.output || 0)) * 0.000003;
 
-          // Save to tracker
-          const entry = {
+          // Save to tracker (localStorage first, KV in background)
+          saveApp({
             date: new Date().toISOString().split('T')[0],
-            company, role, score: data.score, archetype: data.archetype,
-            status: 'evaluated', jdLink: jdLink || '',
-            resumeHtml: rData.html || '', resumeFilename: rData.filename || '',
+            company: detectedCompany,
+            role: detectedRole,
+            score: data.score,
+            archetype: data.archetype,
+            status: 'evaluated',
+            jdLink: jdLink || '',
+            resumeHtml: rData.html || '',
+            resumeFilename: rData.filename || '',
             blobUrl: rData.blobUrl || '',
-          };
-          fetch('/api/applications', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(entry),
-          }).catch(() => {
-            const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
-            apps.unshift({ id: `app-${Date.now()}`, createdAt: Date.now(), ...entry });
-            localStorage.setItem('job-apps', JSON.stringify(apps));
           });
         }
       }
@@ -112,6 +149,17 @@ export default function EvaluatePage() {
     if (w) { w.document.write(resumeData.html); w.document.close(); }
   }
 
+  function downloadResume() {
+    if (!resumeData?.html) return;
+    const b = new Blob([resumeData.html], { type: 'text/html' });
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = u;
+    a.download = `${resumeData.filename || `Ganesh_Mamidipalli_AI_Engineer_${company.replace(/[^a-zA-Z0-9]/g, '_')}`}.html`;
+    a.click();
+    URL.revokeObjectURL(u);
+  }
+
   const sc = (s: number) => s >= 4.0 ? 'text-emerald-400' : s >= 3.5 ? 'text-amber-400' : 'text-red-400';
   const sb = (s: number) => s >= 4.0 ? 'bg-emerald-500/20 border-emerald-500/30' : s >= 3.5 ? 'bg-amber-500/20 border-amber-500/30' : 'bg-red-500/20 border-red-500/30';
 
@@ -147,7 +195,10 @@ export default function EvaluatePage() {
       {screening && (
         <div className={`rounded-xl border p-4 mb-4 ${sb(screening.score)}`}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-gray-300">Fit Score</span>
+            <div>
+              <span className="text-sm font-medium text-gray-300">Fit Score</span>
+              {company !== 'Company' && <span className="text-xs text-gray-500 ml-2">{company} - {role}</span>}
+            </div>
             <span className={`text-3xl font-bold ${sc(screening.score)}`}>{screening.score}/5</span>
           </div>
           <p className="text-sm text-gray-300">{screening.reason}</p>
@@ -165,59 +216,42 @@ export default function EvaluatePage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-base font-bold text-emerald-400">Resume Ready</h2>
-              <p className="text-xs text-gray-500 font-mono">{resumeData.filename}.pdf</p>
+              <p className="text-xs text-gray-500 font-mono">{resumeData.filename}.html</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button onClick={openResume}
               className="py-3 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-500 active:scale-95 transition-all min-h-[48px]">
-              Open & Print PDF
+              Open Resume
             </button>
-            <button onClick={() => {
-              if (resumeData.blobUrl) { window.open(resumeData.blobUrl, '_blank'); return; }
-              const b = new Blob([resumeData.html], { type: 'text/html' });
-              const u = URL.createObjectURL(b);
-              const a = document.createElement('a'); a.href = u; a.download = `${resumeData.filename}.html`; a.click();
-              URL.revokeObjectURL(u);
-            }}
+            <button onClick={downloadResume}
               className="py-3 bg-surface-light text-gray-200 font-medium rounded-lg text-sm hover:bg-surface-light/80 active:scale-95 transition-all min-h-[48px]">
-              {resumeData.blobUrl ? 'Open Saved Copy' : 'Download HTML'}
+              Download
             </button>
           </div>
 
           {resumeData.keywords?.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 mb-3">
               {resumeData.keywords.slice(0, 15).map((k: string, i: number) => (
                 <span key={i} className="text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent rounded-full">{k}</span>
               ))}
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-2">Opens formatted resume. Use Ctrl+P / Cmd+P to save as PDF.</p>
 
-          {/* I Will Apply button */}
-          <button
-            onClick={async () => {
-              const company = extractCompany(jd);
-              const updates = { status: 'applied', jdLink: jdLink || '' };
-              try {
-                const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
-                const match = apps.find((a: any) => a.company === company);
-                if (match) {
-                  match.status = 'applied';
-                  if (jdLink) match.jdLink = jdLink;
-                  localStorage.setItem('job-apps', JSON.stringify(apps));
-                }
-                await fetch('/api/applications', {
-                  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ id: match?.id, ...updates }),
-                }).catch(() => {});
-              } catch {}
-              alert('Marked as Applied! Check Applications tab.');
+          <p className="text-xs text-gray-500">Open → Ctrl+P / Cmd+P → Save as PDF</p>
+
+          {/* I Will Apply */}
+          {!appliedMsg && (
+            <button onClick={() => {
+              updateAppStatus(company, role, 'applied', jdLink);
+              setAppliedMsg('Marked as Applied! Check Applications tab.');
             }}
-            className="w-full mt-3 py-3 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-500 active:scale-95 transition-all min-h-[48px]">
-            I Will Apply for This Role
-          </button>
+              className="w-full mt-3 py-3 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-500 active:scale-95 transition-all min-h-[48px]">
+              I Will Apply for This Role
+            </button>
+          )}
+          {appliedMsg && <p className="text-xs text-emerald-400 mt-3 text-center font-medium">{appliedMsg}</p>}
         </div>
       )}
 
@@ -229,9 +263,7 @@ export default function EvaluatePage() {
               <p className="text-sm text-gray-300">Need detailed A-F evaluation?</p>
               <p className="text-xs text-gray-500">Uses Opus (~$0.10)</p>
             </div>
-            <button onClick={runFullReport} className="px-4 py-2 bg-surface-light text-gray-200 rounded-lg text-sm hover:bg-surface-light/80 active:scale-95">
-              Full Report
-            </button>
+            <button onClick={runFullReport} className="px-4 py-2 bg-surface-light text-gray-200 rounded-lg text-sm hover:bg-surface-light/80 active:scale-95">Full Report</button>
           </div>
         </div>
       )}
@@ -251,7 +283,7 @@ export default function EvaluatePage() {
               const b = new Blob([report], { type: 'text/markdown' });
               const u = URL.createObjectURL(b);
               const a = document.createElement('a'); a.href = u;
-              a.download = `${resumeData?.filename || 'Ganesh_Mamidipalli'}_eval.md`; a.click();
+              a.download = `${resumeData?.filename || `Ganesh_Mamidipalli_AI_Engineer_${company.replace(/[^a-zA-Z0-9]/g, '_')}`}_eval.md`; a.click();
             }} className="px-3 py-1 bg-surface-light text-gray-300 rounded-lg text-xs">Download</button>
           </div>
           <div className="prose max-w-none text-sm"><ReactMarkdown>{report}</ReactMarkdown></div>

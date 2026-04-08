@@ -18,26 +18,18 @@ export default function ApplicationsPage() {
   const [newEntry, setNewEntry] = useState({ company: '', role: '', jdLink: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/applications');
-        const data = await res.json();
-        if (data.apps?.length > 0) setApps(data.apps);
-        else setApps(JSON.parse(localStorage.getItem('job-apps') || '[]'));
-      } catch { setApps(JSON.parse(localStorage.getItem('job-apps') || '[]')); }
-      setLoading(false);
-    })();
+    // localStorage is primary -- always reliable, no KV dependency
+    const local = JSON.parse(localStorage.getItem('job-apps') || '[]');
+    setApps(local);
+    setLoading(false);
   }, []);
 
-  const updateApp = useCallback(async (id: string, updates: any) => {
-    try {
-      const res = await fetch('/api/applications', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...updates }),
-      });
-      if (res.ok) { setApps((p) => p.map((a) => a.id === id ? { ...a, ...updates } : a)); return; }
-    } catch {}
-    setApps((p) => { const u = p.map((a) => a.id === id ? { ...a, ...updates } : a); localStorage.setItem('job-apps', JSON.stringify(u)); return u; });
+  const updateApp = useCallback((id: string, updates: any) => {
+    setApps((prev) => {
+      const updated = prev.map((a) => a.id === id ? { ...a, ...updates } : a);
+      localStorage.setItem('job-apps', JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   function openResume(app: AppEntry) {
@@ -190,6 +182,18 @@ export default function ApplicationsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Clear all */}
+      {apps.length > 0 && (
+        <button onClick={() => {
+          if (confirm('Clear all applications? This cannot be undone.')) {
+            localStorage.removeItem('job-apps');
+            setApps([]);
+          }
+        }} className="w-full mt-4 py-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
+          Clear all data
+        </button>
       )}
 
       {/* Modal */}
