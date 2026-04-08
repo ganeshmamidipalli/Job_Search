@@ -52,7 +52,7 @@ CANDIDATE PROFILE:
 
 export async function POST(req: Request) {
   try {
-    const { jobDescription } = await req.json();
+    const { jobDescription, scoreOnly = true } = await req.json();
 
     if (!jobDescription || jobDescription.trim().length < 50) {
       return Response.json(
@@ -94,21 +94,19 @@ export async function POST(req: Request) {
       screening = { score: 3.0, reason: 'Could not parse screening result', archetype: 'unknown' };
     }
 
-    // If low score, return early -- save Opus tokens
-    if (screening.score <= 3.5) {
+    // Return score only if requested or if low score
+    if (scoreOnly || screening.score <= 3.5) {
       return Response.json({
         pass: 'screening',
         score: screening.score,
         reason: screening.reason,
         archetype: screening.archetype,
-        recommendation: 'skip',
-        report: null,
+        recommendation: screening.score > 3.5 ? 'consider' : 'skip',
         tokenUsage: {
           screening: {
             input: screeningResponse.usage.input_tokens,
             output: screeningResponse.usage.output_tokens,
           },
-          full: null,
         },
       });
     }
