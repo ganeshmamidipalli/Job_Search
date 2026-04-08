@@ -135,6 +135,17 @@ export default function ApplicationsPage() {
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ss(app.status)}`}>
                     {app.status === 'applied' ? 'Applied' : app.status === 'not-applied' ? 'Skipped' : 'Pending'}
                   </span>
+                  <button onClick={() => {
+                    if (confirm(`Delete ${app.company} - ${app.role}?`)) {
+                      setApps((prev) => {
+                        const filtered = prev.filter((a) => a.id !== app.id);
+                        localStorage.setItem('job-apps', JSON.stringify(filtered));
+                        return filtered;
+                      });
+                    }
+                  }} className="text-gray-600 hover:text-red-400 transition-colors ml-1" title="Delete">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 </div>
               </div>
 
@@ -184,17 +195,7 @@ export default function ApplicationsPage() {
         </div>
       )}
 
-      {/* Clear all */}
-      {apps.length > 0 && (
-        <button onClick={() => {
-          if (confirm('Clear all applications? This cannot be undone.')) {
-            localStorage.removeItem('job-apps');
-            setApps([]);
-          }
-        }} className="w-full mt-4 py-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
-          Clear all data
-        </button>
-      )}
+      {/* No clear all -- delete individual entries via the X button on each card */}
 
       {/* Modal */}
       {modal && (
