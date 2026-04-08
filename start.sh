@@ -17,11 +17,31 @@ echo ""
 
 # 2. Start local dashboard in background
 echo "[2/3] Starting local dashboard..."
+
+# Kill any existing dashboard on port 3000
+EXISTING_PID=$(lsof -ti :3000 2>/dev/null)
+if [ -n "$EXISTING_PID" ]; then
+  echo "      Stopping previous dashboard (PID: $EXISTING_PID)..."
+  kill $EXISTING_PID 2>/dev/null
+  sleep 1
+fi
+
 cd web-dashboard
 npm run dev &>/dev/null &
 DASHBOARD_PID=$!
 cd ..
-sleep 3
+
+# Wait for dashboard to actually be ready (up to 15s)
+echo -n "      Waiting for dashboard"
+for i in $(seq 1 15); do
+  if curl -s -o /dev/null http://localhost:3000 2>/dev/null; then
+    echo " ✓"
+    break
+  fi
+  echo -n "."
+  sleep 1
+done
+
 open "http://localhost:3000" 2>/dev/null || true
 echo "      Dashboard: http://localhost:3000 (PID: $DASHBOARD_PID)"
 
@@ -53,4 +73,10 @@ echo "  Dashboard auto-refreshes at localhost:3000"
 echo "--------------------------------------"
 echo ""
 
-claude
+if command -v claude &>/dev/null; then
+  claude
+else
+  echo "⚠ 'claude' not found in PATH. Open a terminal and run: claude"
+  echo "  Press any key to exit..."
+  read -n 1
+fi

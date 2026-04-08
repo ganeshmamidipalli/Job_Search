@@ -6,8 +6,21 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/', label: 'Dashboard', icon: DashboardIcon },
   { href: '/applications', label: 'Applications', icon: ApplicationsIcon },
+  { href: '/knowledge-graph', label: 'Knowledge Graph', icon: GraphIcon },
   { href: '/profile', label: 'Profile', icon: ProfileIcon },
 ];
+
+function GraphIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="2" strokeWidth={2} />
+      <circle cx="5" cy="19" r="2" strokeWidth={2} />
+      <circle cx="19" cy="19" r="2" strokeWidth={2} />
+      <path strokeLinecap="round" strokeWidth={2} d="M12 7v4M7.5 17.5L11 13M16.5 17.5L13 13" />
+      <circle cx="12" cy="12" r="1.5" strokeWidth={2} />
+    </svg>
+  );
+}
 
 function DashboardIcon() {
   return (

@@ -12,13 +12,15 @@
 
 | File | Path | When |
 |------|------|------|
-| cv.md | `cv.md` (project root) | ALWAYS |
-| article-digest.md | `article-digest.md` (if exists) | ALWAYS (detailed proof points) |
+| ganesh-wiki.md | `ganesh-wiki.md` (project root) | ALWAYS FIRST -- master knowledge graph (identity, systems, metrics, stories, communication rules). This is the AI's memory of Ganesh. |
+| _profile.md | `modes/_profile.md` | ALWAYS (archetypes, framing, negotiation, comp targets) |
 | profile.yml | `config/profile.yml` | ALWAYS (candidate identity and targets) |
-| _profile.md | `modes/_profile.md` | ALWAYS (user archetypes, narrative, negotiation) |
+| cv.md | `cv.md` (project root) | Only for PDF generation and ATS keyword matching |
+| article-digest.md | `article-digest.md` (if exists) | Only when detailed proof points needed beyond wiki |
 
-**RULE: NEVER hardcode metrics from proof points.** Read them from cv.md + article-digest.md at evaluation time.
-**RULE: For article/project metrics, article-digest.md takes precedence over cv.md.**
+**RULE: ganesh-wiki.md is THE source of truth.** It contains 7+ years of real experience, full system architectures, production incidents, STAR stories, metrics, and communication rules. Read it first, always.
+**RULE: NEVER hardcode metrics.** Pull them from ganesh-wiki.md at evaluation time.
+**RULE: cv.md is the ATS-formatted resume, NOT the source of truth.** If wiki and cv.md conflict, wiki wins.
 **RULE: Read _profile.md AFTER this file. User customizations in _profile.md override defaults here.**
 
 ---
