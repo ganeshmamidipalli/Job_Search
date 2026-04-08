@@ -13,56 +13,93 @@ export async function POST(req: Request) {
       return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
     }
 
-    // Use FULL wiki for resume -- need all experience details for 2-3 pages
     const wiki = getWikiFull();
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      system: `You are generating a FULL 2-3 page ATS-optimized resume for Ganesh Hemanth Mamidipalli, tailored for a specific job. Use the complete professional profile below.
+      max_tokens: 4096,
+      system: `You generate a FULL 3-page ATS-optimized resume for Ganesh Hemanth Mamidipalli tailored to a specific JD. Use the complete profile below. The resume must be COMPREHENSIVE - every section filled, every role detailed.
 
-OUTPUT: Return a JSON object with the full resume content structured by section. Every section must be detailed and substantial.
+CRITICAL RULES:
+- Use the EXACT experience, metrics, and projects from the profile. Do NOT invent anything.
+- Tailor by: rewriting summary for this role, reordering bullets to match JD priorities, emphasizing matching skills
+- 7+ years experience (Jun 2019 to present). NOT 8+.
+- No em dashes. Use hyphens or "to" instead.
+- Every bullet must have a concrete number or metric
+- GCP is primary cloud, mention first
+- ATS-friendly: simple formatting, standard section headers, no tables, no columns
+- Must fill 3 full pages when formatted
 
-RULES:
-- No em dashes. Use hyphens instead.
-- Every bullet must have a concrete metric or number
-- Lead with impact and results, not technology names
-- GCP is primary cloud, mention first. AWS is secondary
-- Tailor the summary, bullet ordering, and emphasis to match the JD
-- Include ALL relevant experience - this must fill 2-3 pages when formatted
-- Each role must have 5-8 detailed bullets
-- Skills section must be comprehensive
-- Include projects, certifications, education
-
-Return JSON:
+Return JSON with these exact sections:
 {
-  "name": "GANESH HEMANTH MAMIDIPALLI",
-  "contact": "mganeshhemanth@gmail.com | +1 (316) 210-1890 | ganeshmamidipalli.com | linkedin.com/in/ganesh-mamidipalli-951a95102",
-  "summary": "4-5 sentence tailored professional summary for this specific role",
+  "summary": "5-6 sentence tailored summary. Must mention the target company/role explicitly. Include key metrics.",
   "skills": {
     "GenAI & LLMs": "...",
     "ML & Deep Learning": "...",
+    "LLMs & Models": "...",
     "MLOps & Infrastructure": "...",
     "Cloud": "...",
-    "Programming": "..."
+    "Data & Databases": "...",
+    "Programming": "...",
+    "Security & Governance": "..."
   },
   "experience": [
     {
       "title": "AI Engineer - GCP & MLOps Platform",
       "company": "National Institute for Aviation Research (NIAR), Wichita State University",
       "location": "Wichita, KS",
-      "dates": "Jan 2025 - Present",
-      "bullets": ["bullet with metric", "bullet with metric", ...]
+      "dates": "January 2025 - Present",
+      "bullets": ["7-8 detailed bullets with metrics, tailored to match JD"]
+    },
+    {
+      "title": "AI Engineer - LLM Fine-Tuning & AI Security",
+      "company": "Knowmadics",
+      "location": "Remote",
+      "dates": "July 2024 - January 2025",
+      "bullets": ["6-7 detailed bullets"]
+    },
+    {
+      "title": "Senior Data Scientist / ML Engineer",
+      "company": "WayCool Technologies",
+      "location": "India (Remote)",
+      "dates": "January 2021 - January 2024",
+      "bullets": ["5-6 detailed bullets"]
+    },
+    {
+      "title": "Data Scientist / Business Intelligence Analyst",
+      "company": "Sagacious Research",
+      "location": "India",
+      "dates": "June 2019 - December 2020",
+      "bullets": ["3-4 bullets"]
     }
   ],
+  "research": {
+    "title": "LLM Output Determinism & Reproducibility",
+    "bullets": ["3-4 research bullets"]
+  },
   "projects": [
-    {"name": "Project Name", "description": "1-2 sentence with metrics"}
+    {"name": "OpenClaw AI", "link": "ganeshmamidipalli.com", "description": "2-3 sentence description with metrics"},
+    {"name": "Multi-Agent AI Platform - MCP & A2A Protocol", "description": "1-2 sentences"},
+    {"name": "Financial Domain RAG Assistant", "description": "1-2 sentences with metrics"},
+    {"name": "WSDM Cup 2024 - LLM Evaluation", "badge": "Top 10% Globally", "description": "1-2 sentences"},
+    {"name": "Computer Vision Quality Inspection System", "description": "1 sentence with metric"}
   ],
   "education": [
-    {"degree": "...", "school": "...", "details": "..."}
+    {"degree": "M.S. in Business Analytics - Data Science Track", "school": "Wichita State University", "gpa": "3.9/4.0"},
+    {"degree": "B.Tech in Electronics & Communication Engineering", "school": "Lovely Professional University, India"}
   ],
-  "certifications": ["cert1", "cert2", ...],
-  "keywords": ["keyword1", "keyword2", ...]
+  "certifications": [
+    "Top 10% Global Finalist - WSDM Cup 2024 (LLM Evaluation Track)",
+    "Certified Data Scientist - Dell / NVIDIA GenAI Model Augmentation & Data Engineering Program",
+    "Meta Advanced Management Program",
+    "$10,000 Garvey Family Scholarship - Academic excellence and research potential",
+    "Graduate Research Assistantships - NIAR (Aviation AI) & Koch Global Trading Center (Financial ML)"
+  ],
+  "publications": [
+    "publication line 1",
+    "publication line 2"
+  ],
+  "keywords": ["ATS keywords from JD"]
 }
 
 CANDIDATE PROFILE:
@@ -70,7 +107,7 @@ ${wiki}`,
       messages: [
         {
           role: 'user',
-          content: `Generate a FULL tailored resume for:\nCompany: ${company}\nRole: ${role}\nArchetype: ${archetype}\n\nJOB DESCRIPTION:\n${jobDescription?.substring(0, 4000) || 'Not provided'}`,
+          content: `Generate FULL 3-page tailored resume for:\nCompany: ${company}\nRole: ${role}\nArchetype: ${archetype}\n\nJOB DESCRIPTION:\n${jobDescription?.substring(0, 4000) || 'General AI Engineer role'}`,
         },
       ],
     });
@@ -82,23 +119,33 @@ ${wiki}`,
       result = JSON.parse(text);
     } catch {
       const jsonMatch = text.match(/```json?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1]);
-      } else {
-        return Response.json({ error: 'Failed to parse resume' }, { status: 500 });
-      }
+      if (jsonMatch) result = JSON.parse(jsonMatch[1]);
+      else return Response.json({ error: 'Failed to parse resume content' }, { status: 500 });
     }
 
     const companySlug = company.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
     const filename = `Ganesh_Mamidipalli_AI_Engineer_${companySlug}`;
+    const html = buildResumeHTML(result);
 
-    // Generate print-ready HTML resume
-    const html = generateResumeHTML(result, filename);
+    // Store HTML to Vercel Blob if available
+    let blobUrl = null;
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import('@vercel/blob');
+        const blob = await put(`resumes/${filename}.html`, html, {
+          access: 'public',
+          contentType: 'text/html',
+        });
+        blobUrl = blob.url;
+      } catch {}
+    }
 
     return Response.json({
-      ...result,
       filename,
       html,
+      blobUrl,
+      keywords: result.keywords || [],
+      summary: result.summary || '',
       tokenUsage: {
         input: response.usage.input_tokens,
         output: response.usage.output_tokens,
@@ -109,76 +156,152 @@ ${wiki}`,
   }
 }
 
-function generateResumeHTML(data: any, filename: string): string {
-  const skills = Object.entries(data.skills || {})
-    .map(([cat, items]) => `<div><strong>${cat}:</strong> ${items}</div>`)
+function buildResumeHTML(d: any): string {
+  const esc = (s: string) => s || '';
+
+  const skillsHTML = Object.entries(d.skills || {})
+    .map(([cat, val]) => `<div class="skill-row"><span class="skill-cat">${cat}</span><span class="skill-val">${val}</span></div>`)
     .join('');
 
-  const experience = (data.experience || [])
-    .map((exp: any) => `
-      <div class="role">
-        <div class="role-header">
-          <div><strong>${exp.title}</strong> | ${exp.company}</div>
-          <div>${exp.location} | ${exp.dates}</div>
-        </div>
-        <ul>${(exp.bullets || []).map((b: string) => `<li>${b}</li>`).join('')}</ul>
-      </div>`)
-    .join('');
+  const expHTML = (d.experience || []).map((exp: any) => `
+    <div class="exp">
+      <div class="exp-head">
+        <div class="exp-title">${esc(exp.title)} &middot; ${esc(exp.company)} &middot; ${esc(exp.location)}</div>
+        <div class="exp-date">${esc(exp.dates)}</div>
+      </div>
+      <ul>${(exp.bullets || []).map((b: string) => `<li>${b}</li>`).join('')}</ul>
+      ${exp.stack ? `<div class="stack">Stack: ${exp.stack}</div>` : ''}
+    </div>`).join('');
 
-  const projects = (data.projects || [])
-    .map((p: any) => `<li><strong>${p.name}:</strong> ${p.description}</li>`)
-    .join('');
+  const researchHTML = d.research ? `
+    <div class="exp">
+      <div class="exp-head">
+        <div class="exp-title">${esc(d.research.title)} [Ongoing Research]</div>
+      </div>
+      <ul>${(d.research.bullets || []).map((b: string) => `<li>${b}</li>`).join('')}</ul>
+    </div>` : '';
 
-  const education = (data.education || [])
-    .map((e: any) => `<div><strong>${e.degree}</strong> - ${e.school}${e.details ? ` | ${e.details}` : ''}</div>`)
-    .join('');
+  const projectsHTML = (d.projects || []).map((p: any) => `
+    <div class="project">
+      <strong>${esc(p.name)}${p.badge ? ` [${p.badge}]` : ''}${p.link ? ` <span class="link">[${p.link}]</span>` : ''}</strong>
+      <div>${esc(p.description)}</div>
+    </div>`).join('');
 
-  const certs = (data.certifications || [])
-    .map((c: string) => `<li>${c}</li>`)
-    .join('');
+  const eduHTML = (d.education || []).map((e: any) => `
+    <div class="edu-row">
+      <span><strong>${esc(e.degree)}</strong>${e.gpa ? ` &nbsp; GPA: ${e.gpa}` : ''}</span>
+      <span>${esc(e.school)}</span>
+    </div>`).join('');
+
+  const certsHTML = (d.certifications || []).map((c: string) => `<li>${c}</li>`).join('');
+  const pubsHTML = (d.publications || []).map((p: string) => `<li>${p}</li>`).join('');
 
   return `<!DOCTYPE html>
-<html><head>
+<html lang="en"><head>
 <meta charset="utf-8">
-<title>${filename}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ganesh Mamidipalli - Resume</title>
 <style>
-  @page { margin: 0.5in; size: letter; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Calibri', 'Helvetica Neue', Arial, sans-serif; font-size: 10.5pt; line-height: 1.4; color: #1a1a1a; max-width: 8.5in; margin: 0 auto; padding: 0.5in; }
-  h1 { font-size: 18pt; font-weight: bold; text-align: center; margin-bottom: 2px; letter-spacing: 1px; }
-  .contact { text-align: center; font-size: 9.5pt; color: #444; margin-bottom: 12px; }
-  h2 { font-size: 11pt; font-weight: bold; text-transform: uppercase; border-bottom: 1.5px solid #1a1a1a; margin: 12px 0 6px; padding-bottom: 2px; letter-spacing: 0.5px; }
-  .summary { margin-bottom: 8px; font-size: 10.5pt; }
-  .skills { font-size: 9.5pt; }
-  .skills div { margin-bottom: 3px; }
-  .role { margin-bottom: 10px; }
-  .role-header { display: flex; justify-content: space-between; font-size: 10.5pt; margin-bottom: 4px; flex-wrap: wrap; }
-  ul { margin-left: 16px; margin-top: 3px; }
-  li { margin-bottom: 3px; font-size: 10pt; }
-  .projects li { margin-bottom: 4px; }
-  @media print { body { padding: 0; } }
-  @media screen { body { background: #f5f5f5; padding: 0.75in; box-shadow: 0 0 20px rgba(0,0,0,0.1); background: white; margin: 20px auto; } }
+@page { margin: 0.45in 0.55in; size: letter; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: Calibri, 'Segoe UI', Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.35;
+  color: #1a1a1a;
+  max-width: 8.5in;
+  margin: 0 auto;
+}
+@media screen {
+  body { padding: 0.5in 0.6in; background: white; margin: 16px auto; box-shadow: 0 2px 24px rgba(0,0,0,0.12); }
+}
+@media print { body { padding: 0; } }
+
+/* Header */
+.header { text-align: center; margin-bottom: 8px; }
+.name { font-size: 17pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; }
+.tagline { font-size: 9.5pt; color: #444; margin: 2px 0; }
+.contact { font-size: 9pt; color: #555; }
+
+/* Section headers */
+h2 {
+  font-size: 10.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 1.5px solid #1a1a1a;
+  margin: 10px 0 5px;
+  padding-bottom: 2px;
+}
+
+/* Skills */
+.skill-row { display: flex; margin-bottom: 2px; font-size: 9.5pt; }
+.skill-cat { font-weight: bold; min-width: 155px; flex-shrink: 0; }
+.skill-val { flex: 1; }
+
+/* Experience */
+.exp { margin-bottom: 8px; }
+.exp-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 2px; }
+.exp-title { font-size: 10.5pt; font-weight: bold; }
+.exp-date { font-size: 9.5pt; color: #444; white-space: nowrap; }
+ul { margin-left: 14px; margin-top: 2px; }
+li { margin-bottom: 2px; font-size: 9.8pt; text-align: justify; }
+.stack { font-size: 9pt; color: #555; margin-top: 3px; font-style: italic; }
+
+/* Projects */
+.project { margin-bottom: 5px; font-size: 9.8pt; }
+.project strong { font-size: 10pt; }
+.link { color: #555; font-weight: normal; font-size: 9pt; }
+
+/* Education */
+.edu-row { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10pt; }
+
+/* Certs, pubs */
+.certs-list, .pubs-list { margin-left: 14px; }
+.certs-list li, .pubs-list li { margin-bottom: 2px; font-size: 9.5pt; }
+
+/* Print button - hidden in print */
+.print-btn {
+  position: fixed; bottom: 20px; right: 20px; z-index: 100;
+  background: #06b6d4; color: white; border: none; padding: 12px 24px;
+  border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(6,182,212,0.4);
+}
+.print-btn:hover { background: #0891b2; }
+@media print { .print-btn { display: none; } }
 </style>
 </head><body>
-<h1>${data.name || 'GANESH HEMANTH MAMIDIPALLI'}</h1>
-<div class="contact">${data.contact || ''}</div>
+
+<button class="print-btn" onclick="window.print()">Save as PDF (Ctrl+P)</button>
+
+<div class="header">
+  <div class="name">GANESH HEMANTH MAMIDIPALLI</div>
+  <div class="tagline">Software Engineer &middot; LLM Systems &middot; Generative AI Infrastructure &middot; Agentic Platforms &middot; MLOps</div>
+  <div class="contact">+1 (316) 210-1890 &middot; mganeshhemanth@gmail.com &middot; linkedin.com/in/ganesh-mamidipalli-951a95102 &middot; ganeshmamidipalli.com</div>
+</div>
 
 <h2>Professional Summary</h2>
-<div class="summary">${data.summary || ''}</div>
+<div style="font-size:10pt;text-align:justify;margin-bottom:4px;">${esc(d.summary)}</div>
 
 <h2>Technical Skills</h2>
-<div class="skills">${skills}</div>
+<div>${skillsHTML}</div>
 
 <h2>Professional Experience</h2>
-${experience}
+${expHTML}
 
-<h2>Projects</h2>
-<ul class="projects">${projects}</ul>
+<h2>Active Research</h2>
+${researchHTML}
+
+<h2>Personal Projects & Open Source</h2>
+${projectsHTML}
 
 <h2>Education</h2>
-${education}
+${eduHTML}
 
 <h2>Certifications & Honors</h2>
-<ul>${certs}</ul>
+<ul class="certs-list">${certsHTML}</ul>
+
+${pubsHTML ? `<h2>Research & Publications</h2><ul class="pubs-list">${pubsHTML}</ul>` : ''}
+
 </body></html>`;
 }
