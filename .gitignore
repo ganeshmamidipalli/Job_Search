@@ -30,3 +30,8 @@ node_modules/
 .claude/settings.local.json
 .claude/memory/
 career-dashboard
+
+# Web dashboard
+web-dashboard/node_modules/
+web-dashboard/.next/
+web-dashboard/out/
