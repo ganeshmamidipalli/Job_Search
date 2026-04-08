@@ -5,10 +5,20 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: DashboardIcon },
+  { href: '/evaluate', label: 'Evaluate', icon: EvaluateIcon },
   { href: '/applications', label: 'Applications', icon: ApplicationsIcon },
-  { href: '/knowledge-graph', label: 'Knowledge Graph', icon: GraphIcon },
+  { href: '/knowledge-graph', label: 'Knowledge Graph', icon: GraphIcon, mobileLabel: 'Graph' },
   { href: '/profile', label: 'Profile', icon: ProfileIcon },
 ];
+
+function EvaluateIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg className="w-5 h-5" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
 
 function GraphIcon() {
   return (
@@ -49,43 +59,76 @@ function ProfileIcon() {
   );
 }
 
-export default function Sidebar() {
+export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-surface border-r border-surface-light/30 flex flex-col z-50">
-      <div className="p-6 border-b border-surface-light/30">
-        <h1 className="text-lg font-bold text-gray-100">
-          <span className="text-accent">Ganesh&apos;s</span> Job Search
-        </h1>
-        <p className="text-xs text-gray-500 mt-1">Career-Ops Dashboard</p>
-      </div>
-
-      <nav className="flex-1 py-4">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'text-accent bg-accent/10 border-r-2 border-accent'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-surface-light/20'
-              }`}
-            >
-              <item.icon />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-4 border-t border-surface-light/30">
-        <div className="text-xs text-gray-500">
-          Data refreshed at build time
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-surface border-r border-surface-light/30 flex-col z-50">
+        <div className="p-6 border-b border-surface-light/30">
+          <h1 className="text-lg font-bold text-gray-100">
+            <span className="text-accent">Ganesh&apos;s</span> Job Search
+          </h1>
+          <p className="text-xs text-gray-500 mt-1">Career-Ops Dashboard</p>
         </div>
-      </div>
-    </aside>
+
+        <nav className="flex-1 py-4">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'text-accent bg-accent/10 border-r-2 border-accent'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-surface-light/20'
+                }`}
+              >
+                <item.icon />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-surface-light/30">
+          <div className="text-xs text-gray-500">
+            PWA ready &middot; Works offline
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-lg border-t border-surface-light/30 z-50 safe-bottom">
+        <div className="flex items-center justify-around h-16 px-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            const isEval = item.href === '/evaluate';
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-0 px-2 py-1 rounded-lg transition-colors ${
+                  isEval
+                    ? 'bg-accent text-background rounded-full w-12 h-12 -mt-4 shadow-lg shadow-accent/30'
+                    : isActive
+                    ? 'text-accent'
+                    : 'text-gray-500'
+                }`}
+              >
+                <item.icon filled={isActive} />
+                {!isEval && (
+                  <span className="text-[10px] leading-tight truncate">
+                    {'mobileLabel' in item ? item.mobileLabel : item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

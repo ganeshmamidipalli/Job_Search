@@ -276,32 +276,44 @@ export default function KnowledgeGraphPage() {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [hoveredNode]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const findNode = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
-    if (!canvas || !graphRef.current) return;
+    if (!canvas || !graphRef.current) return null;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
 
-    let found: GraphNode | null = null;
     for (const node of graphRef.current.nodes) {
       const dx = mx - node.x;
       const dy = my - node.y;
-      if (dx * dx + dy * dy < (node.size * 0.8) ** 2) {
-        found = node;
-        break;
-      }
+      // Larger hit area on mobile
+      const hitSize = node.size * 1.2;
+      if (dx * dx + dy * dy < hitSize * hitSize) return node;
     }
+    return null;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const found = findNode(e.clientX, e.clientY);
     setHoveredNode(found);
     setTooltipPos({ x: e.clientX, y: e.clientY });
-    canvas.style.cursor = found ? 'pointer' : 'default';
+    if (canvasRef.current) canvasRef.current.style.cursor = found ? 'pointer' : 'default';
+  };
+
+  const handleTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) { setHoveredNode(null); return; }
+    const found = findNode(touch.clientX, touch.clientY);
+    setHoveredNode(found);
+    setTooltipPos({ x: touch.clientX, y: touch.clientY - 80 });
   };
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-100">Knowledge Graph</h1>
-        <p className="text-gray-400 mt-1">Interactive map of skills, systems, and experience — powered by ganesh-wiki.md</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-100">Knowledge Graph</h1>
+        <p className="text-gray-400 mt-1 text-sm">Interactive map of skills, systems, and experience</p>
       </div>
 
       {/* Legend */}
@@ -314,12 +326,15 @@ export default function KnowledgeGraphPage() {
         ))}
       </div>
 
-      <div className="relative bg-surface rounded-xl border border-surface-light/30 overflow-hidden" style={{ height: '70vh' }}>
+      <div className="relative bg-surface rounded-xl border border-surface-light/30 overflow-hidden" style={{ height: 'calc(60vh)' }}>
         <canvas
           ref={canvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredNode(null)}
-          className="w-full h-full"
+          onTouchStart={handleTouch}
+          onTouchMove={handleTouch}
+          onTouchEnd={() => setHoveredNode(null)}
+          className="w-full h-full touch-none"
         />
 
         {/* Tooltip */}

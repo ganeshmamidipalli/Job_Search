@@ -2,10 +2,7 @@ import { getReports, getReport } from '@/lib/data';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 
-export function generateStaticParams() {
-  const reports = getReports();
-  return reports.map((r) => ({ id: r.id }));
-}
+export const dynamic = 'force-dynamic';
 
 export default function ReportPage({ params }: { params: { id: string } }) {
   const report = getReport(params.id);

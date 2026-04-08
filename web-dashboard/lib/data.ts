@@ -3,6 +3,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 
 const PROJECT_ROOT = path.resolve(process.cwd(), '..');
+const SNAPSHOT_ROOT = path.resolve(process.cwd(), 'data-snapshot');
 
 export interface Application {
   num: number;
@@ -48,7 +49,19 @@ export interface Profile {
   skills: Record<string, string>;
 }
 
-function safeReadFile(filePath: string): string | null {
+function safeReadFile(relativePath: string): string | null {
+  // Try project root first (local dev), then data-snapshot (Vercel)
+  for (const root of [PROJECT_ROOT, SNAPSHOT_ROOT]) {
+    try {
+      return fs.readFileSync(path.join(root, relativePath), 'utf-8');
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function safeReadFileAbs(filePath: string): string | null {
   try {
     return fs.readFileSync(filePath, 'utf-8');
   } catch {
@@ -57,7 +70,7 @@ function safeReadFile(filePath: string): string | null {
 }
 
 export function getApplications(): Application[] {
-  const content = safeReadFile(path.join(PROJECT_ROOT, 'data', 'applications.md'));
+  const content = safeReadFile('data/applications.md');
   if (!content) return [];
 
   const lines = content.split('\n');
@@ -102,7 +115,9 @@ export function getApplications(): Application[] {
 }
 
 export function getReports(): Report[] {
-  const reportsDir = path.join(PROJECT_ROOT, 'reports');
+  // Try both roots for reports directory
+  let reportsDir = path.join(PROJECT_ROOT, 'reports');
+  try { fs.readdirSync(reportsDir); } catch { reportsDir = path.join(SNAPSHOT_ROOT, 'reports'); }
   try {
     const files = fs.readdirSync(reportsDir).filter((f) => f.endsWith('.md'));
     return files.map((filename) => {
@@ -138,8 +153,8 @@ export function getReport(id: string): Report | null {
 }
 
 export function getProfile(): Profile {
-  const profileContent = safeReadFile(path.join(PROJECT_ROOT, 'config', 'profile.yml'));
-  const cvContent = safeReadFile(path.join(PROJECT_ROOT, 'cv.md')) || '';
+  const profileContent = safeReadFile('config/profile.yml');
+  const cvContent = safeReadFile('cv.md') || '';
 
   const emptyProfile: Profile = {
     fullName: '',

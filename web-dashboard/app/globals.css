@@ -7,6 +7,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Safe area for mobile bottom nav (notch devices) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent pull-to-refresh on mobile when interacting with canvas */
+.touch-none {
+  touch-action: none;
+}
+
 /* Markdown rendered content */
 .prose h1 { @apply text-2xl font-bold text-gray-100 mb-4 mt-8; }
 .prose h2 { @apply text-xl font-semibold text-gray-200 mb-3 mt-6 pb-2 border-b border-surface-light/30; }

@@ -4,23 +4,27 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "prebuild": "bash prebuild.sh",
+    "build": "npm run prebuild && next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.85.0",
+    "@vercel/blob": "^2.3.3",
+    "@vercel/kv": "^3.0.0",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-markdown": "^9.0.1",
-    "gray-matter": "^4.0.3",
-    "js-yaml": "^4.1.0"
+    "react-markdown": "^9.0.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.12.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/js-yaml": "^4.0.9",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
