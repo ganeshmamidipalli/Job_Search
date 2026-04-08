@@ -194,7 +194,30 @@ export default function EvaluatePage() {
             </div>
           )}
           <p className="text-xs text-gray-500 mt-2">Opens formatted resume. Use Ctrl+P / Cmd+P to save as PDF.</p>
-          <p className="text-xs text-emerald-400/70 mt-1">Saved to Applications tracker.</p>
+
+          {/* I Will Apply button */}
+          <button
+            onClick={async () => {
+              const company = extractCompany(jd);
+              const updates = { status: 'applied', jdLink: jdLink || '' };
+              try {
+                const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
+                const match = apps.find((a: any) => a.company === company);
+                if (match) {
+                  match.status = 'applied';
+                  if (jdLink) match.jdLink = jdLink;
+                  localStorage.setItem('job-apps', JSON.stringify(apps));
+                }
+                await fetch('/api/applications', {
+                  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: match?.id, ...updates }),
+                }).catch(() => {});
+              } catch {}
+              alert('Marked as Applied! Check Applications tab.');
+            }}
+            className="w-full mt-3 py-3 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-500 active:scale-95 transition-all min-h-[48px]">
+            I Will Apply for This Role
+          </button>
         </div>
       )}
 

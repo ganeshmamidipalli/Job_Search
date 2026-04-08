@@ -14,6 +14,8 @@ export default function ApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ id: string; type: 'reason' | 'link' | 'applied-link' } | null>(null);
   const [inputVal, setInputVal] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEntry, setNewEntry] = useState({ company: '', role: '', jdLink: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => {
     (async () => {
@@ -65,6 +67,58 @@ export default function ApplicationsPage() {
           <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-400">{skipped} skipped</span>
         </div>
       </div>
+
+      {/* Add manually button */}
+      <button onClick={() => setShowAddForm(!showAddForm)}
+        className="w-full mb-3 py-2.5 border border-dashed border-surface-light/50 text-gray-400 rounded-xl text-sm hover:border-accent/50 hover:text-accent transition-colors">
+        {showAddForm ? 'Cancel' : '+ Add application manually'}
+      </button>
+
+      {showAddForm && (
+        <div className="bg-surface rounded-xl border border-surface-light/30 p-4 mb-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input value={newEntry.company} onChange={(e) => setNewEntry({ ...newEntry, company: e.target.value })}
+              placeholder="Company *" className="bg-background border border-surface-light/30 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-accent/50" />
+            <input value={newEntry.role} onChange={(e) => setNewEntry({ ...newEntry, role: e.target.value })}
+              placeholder="Role / Position *" className="bg-background border border-surface-light/30 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-accent/50" />
+          </div>
+          <input value={newEntry.jdLink} onChange={(e) => setNewEntry({ ...newEntry, jdLink: e.target.value })}
+            placeholder="Job posting URL" type="url" className="w-full bg-background border border-surface-light/30 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-accent/50" />
+          <input value={newEntry.date} onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
+            type="date" className="w-full bg-background border border-surface-light/30 rounded-lg p-2.5 text-sm text-gray-200 focus:outline-none focus:border-accent/50" />
+          <button
+            disabled={!newEntry.company.trim() || !newEntry.role.trim()}
+            onClick={async () => {
+              const entry = {
+                id: `app-${Date.now()}`,
+                date: newEntry.date,
+                company: newEntry.company.trim(),
+                role: newEntry.role.trim(),
+                score: 0,
+                archetype: 'Manual',
+                status: 'applied' as const,
+                jdLink: newEntry.jdLink.trim() || '',
+                createdAt: Date.now(),
+              };
+              try {
+                await fetch('/api/applications', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(entry),
+                });
+              } catch {}
+              // Always save to localStorage too
+              const local = JSON.parse(localStorage.getItem('job-apps') || '[]');
+              local.unshift(entry);
+              localStorage.setItem('job-apps', JSON.stringify(local));
+              setApps((p) => [entry, ...p]);
+              setNewEntry({ company: '', role: '', jdLink: '', date: new Date().toISOString().split('T')[0] });
+              setShowAddForm(false);
+            }}
+            className="w-full py-2.5 bg-accent text-background font-bold rounded-lg text-sm disabled:opacity-40 hover:bg-accent-light active:scale-95 transition-all min-h-[44px]">
+            Add to Applications
+          </button>
+        </div>
+      )}
 
       {apps.length === 0 ? (
         <div className="bg-surface rounded-xl border border-surface-light/30 p-12 text-center">
