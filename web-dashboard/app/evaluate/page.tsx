@@ -78,6 +78,41 @@ export default function EvaluatePage() {
             ...prev,
             resume: resumeData.tokenUsage || null,
           }));
+
+          // Auto-save to applications tracker
+          const company = extractCompany(jd);
+          try {
+            await fetch('/api/applications', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                date: new Date().toISOString().split('T')[0],
+                company,
+                role: data.archetype,
+                score: data.score,
+                archetype: data.archetype,
+                status: 'evaluated',
+                resumeContent: JSON.stringify(resumeData),
+                resumeFilename: resumeData.filename,
+              }),
+            });
+          } catch {
+            // KV not configured -- save to localStorage fallback
+            const apps = JSON.parse(localStorage.getItem('job-apps') || '[]');
+            apps.unshift({
+              id: `app-${Date.now()}`,
+              date: new Date().toISOString().split('T')[0],
+              company,
+              role: data.archetype,
+              score: data.score,
+              archetype: data.archetype,
+              status: 'evaluated',
+              resumeContent: JSON.stringify(resumeData),
+              resumeFilename: resumeData.filename,
+              createdAt: Date.now(),
+            });
+            localStorage.setItem('job-apps', JSON.stringify(apps));
+          }
         } catch {
           // Resume gen failed, but score is still valid
         }
