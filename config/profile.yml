@@ -1,0 +1,72 @@
+# Job Search Profile Configuration
+# Single source of truth for personal data across all modes.
+
+candidate:
+  full_name: "Ganesh Hemanth Mamidipalli"
+  email: "mganeshhemanth@gmail.com"
+  phone: "+1 (316) 210-1890"
+  location: "Wichita, KS"
+  linkedin: "linkedin.com/in/ganesh-mamidipalli-951a95102"
+  portfolio_url: "https://ganeshmamidipalli.com"
+  github: "github.com/ganeshmamidipalli"
+
+target_roles:
+  primary:
+    - "Senior AI Engineer"
+    - "Staff ML Engineer"
+    - "Senior LLM Engineer"
+    - "AI Platform Engineer"
+  archetypes:
+    - name: "AI/LLM Engineer"
+      level: "Senior/Staff"
+      fit: "primary"
+    - name: "AI Platform / LLMOps Engineer"
+      level: "Senior/Staff"
+      fit: "primary"
+    - name: "ML Engineer / MLOps"
+      level: "Senior/Staff"
+      fit: "primary"
+    - name: "Agentic Systems Engineer"
+      level: "Senior"
+      fit: "primary"
+    - name: "AI Solutions Architect"
+      level: "Senior"
+      fit: "secondary"
+    - name: "GenAI Infrastructure Engineer"
+      level: "Senior"
+      fit: "secondary"
+
+narrative:
+  headline: "AI Engineer building production-grade LLM systems and multi-agent architectures at scale"
+  exit_story: "8+ years progressing from classical ML to enterprise-scale multi-agent platforms. Currently architecting Google ADK + A2A multi-agent systems at NIAR while researching LLM determinism for regulated deployments."
+  superpowers:
+    - "End-to-end LLM fine-tuning to production deployment (QLoRA, GRPO, RLHF)"
+    - "Multi-agent orchestration with real protocol experience (MCP, A2A, ADK)"
+    - "Production RAG pipelines with measurable accuracy improvements"
+    - "MLOps/LLMOps infrastructure on GCP at enterprise scale"
+    - "AI security and guardrails for regulated environments"
+  proof_points:
+    - name: "OpenClaw AI"
+      url: "https://ganeshmamidipalli.com"
+      hero_metric: "94% task completion accuracy vs <70% for leading frameworks"
+    - name: "NIAR Multi-Agent Platform"
+      hero_metric: "35% reduction in enterprise data access latency via ADK + A2A + MCP"
+    - name: "WSDM Cup 2024"
+      hero_metric: "Top 10% globally in LLM evaluation competition"
+    - name: "Inference Optimization"
+      hero_metric: "58% latency reduction on containerized Cloud Run endpoints"
+    - name: "LLM Determinism Research"
+      hero_metric: "Active research targeting open-source toolkit for enterprise LLM reproducibility"
+
+compensation:
+  target_range: "$140K-180K"
+  currency: "USD"
+  minimum: "$120K"
+  location_flexibility: "Open to relocation nationwide; comfortable with on-site, hybrid, or fully remote"
+
+location:
+  country: "United States"
+  city: "Wichita, KS"
+  timezone: "CST"
+  visa_status: "Work authorized"
+  relocation: "Open to relocation nationwide"
