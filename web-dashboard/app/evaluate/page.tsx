@@ -249,11 +249,12 @@ export default function EvaluatePage() {
           </button>
           <button
             onClick={() => {
+              const companySlug = (screening?.archetype || 'company').replace(/[^a-zA-Z0-9]/g, '_');
               const blob = new Blob([report], { type: 'text/markdown' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `evaluation-${new Date().toISOString().split('T')[0]}.md`;
+              a.download = `Ganesh_Mamidipalli_AI_Engineer_${companySlug}_eval.md`;
               a.click();
               URL.revokeObjectURL(url);
             }}
@@ -267,7 +268,12 @@ export default function EvaluatePage() {
       {/* Resume kit */}
       {resumeKit && (
         <div className="bg-surface rounded-xl border border-surface-light/30 p-4 md:p-6 mb-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-200">Resume Kit</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-200">Resume Kit</h2>
+            {resumeKit.filename && (
+              <span className="text-xs text-gray-500 font-mono">{resumeKit.filename}</span>
+            )}
+          </div>
 
           {resumeKit.summary && (
             <div>
@@ -292,21 +298,6 @@ export default function EvaluatePage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-
-          {resumeKit.coverLetterDraft && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-400 mb-1">Cover Letter Draft</h3>
-              <p className="text-sm text-gray-200 bg-background rounded-lg p-3 whitespace-pre-wrap">
-                {resumeKit.coverLetterDraft}
-              </p>
-              <button
-                onClick={() => navigator.clipboard.writeText(resumeKit.coverLetterDraft)}
-                className="text-xs text-accent mt-1 hover:text-accent-light"
-              >
-                Copy
-              </button>
             </div>
           )}
 
